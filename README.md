@@ -11,14 +11,12 @@ JavaScript used only for progressive enhancement — the page is fully readable 
 
 ```
 index.html            single-page site (hero, about, expertise, experience, products, projects, contact)
+styles.css            design tokens + all styling
+main.js               nav, scroll spy, reveal-on-scroll, current year
+favicon.svg           YN monogram favicon
 404.html              styled not-found page
 robots.txt            crawler policy
 sitemap.xml           sitemap for search engines
-.nojekyll             serve files as-is, skip Jekyll processing
-assets/
-  cssstyles.css      design tokens + all styling
-  js/main.js          nav, scroll spy, reveal-on-scroll, current year
-  img/favicon.svg     YN monogram favicon
 ```
 
 ## Local preview
@@ -30,16 +28,15 @@ python3 -m http.server 8080
 
 ## Deployment (GitHub Pages)
 
-1. Merge this branch into `main`.
-2. **Settings → Pages → Build and deployment**: source `Deploy from a branch`,
+1. **Settings → Pages → Build and deployment**: source `Deploy from a branch`,
    branch `main`, folder `/ (root)`.
-3. **Settings → Pages → Custom domain**: enter `yohanesnurcahyo.com` and save.
+2. **Settings → Pages → Custom domain**: enter `yohanesnurcahyo.com` and save.
    GitHub commits a `CNAME` file for you — that is why one is not checked in here.
-4. At the DNS provider for `yohanesnurcahyo.com`:
+3. At the DNS provider for `yohanesnurcahyo.com`:
    - `A` records for the apex domain → `185.199.108.153`, `185.199.109.153`,
      `185.199.110.153`, `185.199.111.153`
    - `CNAME` for `www` → `yoyokits.github.io`
-5. Once DNS resolves, tick **Enforce HTTPS**.
+4. Once DNS resolves, tick **Enforce HTTPS**.
 
 Until the custom domain is configured the site is served at
 `https://yoyokits.github.io/yohanesnurcahyo.com/` — all asset paths in `index.html` are
