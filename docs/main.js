@@ -97,7 +97,6 @@
     if (items.length < 2) return;
 
     var INTERVAL = 2000;
-    var stops = [];
     var index = 0;
     var timer = null;
     var paused = false;
@@ -105,41 +104,31 @@
 
     root.classList.add("is-enhanced");
 
-    // Scroll positions the track can actually reach; the last cards share one stop.
-    function computeStops() {
-      var max = track.scrollWidth - track.clientWidth;
-      var base = items[0].offsetLeft;
-      stops = [];
-      items.forEach(function (item) {
-        var left = Math.min(item.offsetLeft - base, max);
-        if (!stops.length || left - stops[stops.length - 1] > 2) stops.push(left);
-      });
+    items.forEach(function (_, i) {
+      var dot = document.createElement("button");
+      dot.type = "button";
+      dot.setAttribute("aria-label", "Show publication " + (i + 1));
+      dot.addEventListener("click", function () { go(i); restart(); });
+      dotsBox.appendChild(dot);
+    });
 
-      dotsBox.innerHTML = "";
-      stops.forEach(function (_, i) {
-        var dot = document.createElement("button");
-        dot.type = "button";
-        dot.setAttribute("aria-label", "Show publication " + (i + 1));
-        dot.addEventListener("click", function () { go(i); restart(); });
-        dotsBox.appendChild(dot);
-      });
-      index = Math.min(index, stops.length - 1);
-      mark();
+    // Cards near the end can't scroll to the left edge, so their target is clamped;
+    // the highlight still steps through each one.
+    function target(i) {
+      var max = track.scrollWidth - track.clientWidth;
+      return Math.min(items[i].offsetLeft - items[0].offsetLeft, max);
     }
 
     function mark() {
       Array.prototype.forEach.call(dotsBox.children, function (d, i) {
         d.setAttribute("aria-current", i === index ? "true" : "false");
       });
-      var current = index === stops.length - 1 && stops.length < items.length
-        ? items.length - 1
-        : index;
-      items.forEach(function (item, i) { item.classList.toggle("is-current", i === current); });
+      items.forEach(function (item, i) { item.classList.toggle("is-current", i === index); });
     }
 
     function go(i) {
-      index = (i + stops.length) % stops.length;
-      track.scrollTo({ left: stops[index], behavior: reduceMotion ? "auto" : "smooth" });
+      index = (i + items.length) % items.length;
+      track.scrollTo({ left: target(index), behavior: reduceMotion ? "auto" : "smooth" });
       mark();
     }
 
@@ -168,11 +157,14 @@
     track.addEventListener("scroll", function () {
       clearTimeout(scrollEnd);
       scrollEnd = setTimeout(function () {
+        var pos = track.scrollLeft;
+        if (Math.abs(target(index) - pos) <= 4) return;
         var nearest = 0;
-        stops.forEach(function (s, i) {
-          if (Math.abs(s - track.scrollLeft) < Math.abs(stops[nearest] - track.scrollLeft)) nearest = i;
+        items.forEach(function (_, i) {
+          if (Math.abs(target(i) - pos) < Math.abs(target(nearest) - pos)) nearest = i;
         });
-        if (nearest !== index) { index = nearest; mark(); }
+        index = nearest;
+        mark();
       }, 120);
     }, { passive: true });
 
@@ -184,8 +176,10 @@
       inView = true;
     }
 
-    window.addEventListener("resize", computeStops);
-    computeStops();
+    window.addEventListener("resize", function () {
+      track.scrollTo({ left: target(index), behavior: "auto" });
+    });
+    mark();
     restart();
   });
 
