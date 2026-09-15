@@ -89,6 +89,106 @@
     revealables.forEach(function (el) { io.observe(el); });
   }
 
+  /* ---- publications carousel ------------------------------------------ */
+  document.querySelectorAll("[data-carousel]").forEach(function (root) {
+    var track = root.querySelector("[data-carousel-track]");
+    var dotsBox = root.querySelector("[data-carousel-dots]");
+    var items = Array.prototype.slice.call(track.children);
+    if (items.length < 2) return;
+
+    var INTERVAL = 2000;
+    var stops = [];
+    var index = 0;
+    var timer = null;
+    var paused = false;
+    var inView = false;
+
+    root.classList.add("is-enhanced");
+
+    // Scroll positions the track can actually reach; the last cards share one stop.
+    function computeStops() {
+      var max = track.scrollWidth - track.clientWidth;
+      var base = items[0].offsetLeft;
+      stops = [];
+      items.forEach(function (item) {
+        var left = Math.min(item.offsetLeft - base, max);
+        if (!stops.length || left - stops[stops.length - 1] > 2) stops.push(left);
+      });
+
+      dotsBox.innerHTML = "";
+      stops.forEach(function (_, i) {
+        var dot = document.createElement("button");
+        dot.type = "button";
+        dot.setAttribute("aria-label", "Show publication " + (i + 1));
+        dot.addEventListener("click", function () { go(i); restart(); });
+        dotsBox.appendChild(dot);
+      });
+      index = Math.min(index, stops.length - 1);
+      mark();
+    }
+
+    function mark() {
+      Array.prototype.forEach.call(dotsBox.children, function (d, i) {
+        d.setAttribute("aria-current", i === index ? "true" : "false");
+      });
+      var current = index === stops.length - 1 && stops.length < items.length
+        ? items.length - 1
+        : index;
+      items.forEach(function (item, i) { item.classList.toggle("is-current", i === current); });
+    }
+
+    function go(i) {
+      index = (i + stops.length) % stops.length;
+      track.scrollTo({ left: stops[index], behavior: reduceMotion ? "auto" : "smooth" });
+      mark();
+    }
+
+    function tick() {
+      if (!paused && inView && !document.hidden) go(index + 1);
+    }
+
+    function restart() {
+      if (reduceMotion) return;
+      clearInterval(timer);
+      timer = setInterval(tick, INTERVAL);
+    }
+
+    root.querySelector("[data-carousel-prev]").addEventListener("click", function () { go(index - 1); restart(); });
+    root.querySelector("[data-carousel-next]").addEventListener("click", function () { go(index + 1); restart(); });
+
+    root.addEventListener("pointerenter", function () { paused = true; });
+    root.addEventListener("pointerleave", function () { paused = false; restart(); });
+    root.addEventListener("focusin", function () { paused = true; });
+    root.addEventListener("focusout", function (e) {
+      if (!root.contains(e.relatedTarget)) { paused = false; restart(); }
+    });
+
+    // Keep the index in sync when the user swipes or scrolls the track manually.
+    var scrollEnd;
+    track.addEventListener("scroll", function () {
+      clearTimeout(scrollEnd);
+      scrollEnd = setTimeout(function () {
+        var nearest = 0;
+        stops.forEach(function (s, i) {
+          if (Math.abs(s - track.scrollLeft) < Math.abs(stops[nearest] - track.scrollLeft)) nearest = i;
+        });
+        if (nearest !== index) { index = nearest; mark(); }
+      }, 120);
+    }, { passive: true });
+
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(function (entries) {
+        inView = entries[0].isIntersecting;
+      }, { threshold: 0.3 }).observe(root);
+    } else {
+      inView = true;
+    }
+
+    window.addEventListener("resize", computeStops);
+    computeStops();
+    restart();
+  });
+
   /* ---- pointer-tracked card highlight --------------------------------- */
   if (!reduceMotion && window.matchMedia("(hover: hover)").matches) {
     document.querySelectorAll(".card").forEach(function (card) {
